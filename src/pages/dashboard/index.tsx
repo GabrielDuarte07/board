@@ -7,17 +7,39 @@ import styles from "./styles.module.css";
 import Head from "next/head";
 import Textarea from "@/components/textarea";
 
+import { db } from "@/services/firebaseConnection";
+import { addDoc, collection } from "firebase/firestore";
+
 type TypeForm = {
   task: string;
   public: boolean;
 };
 
-const Dashboard = (): ReactElement => {
+type PropsDashboard = {
+  user: {
+    email: string;
+  };
+};
+
+const Dashboard = ({ user: { email } }: PropsDashboard): ReactElement => {
   const [form, setForm] = useState<TypeForm>({ task: "", public: true });
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent): Promise<void> {
     e.preventDefault();
-    console.log(form);
+
+    if (!form.task) return;
+
+    try {
+      await addDoc(collection(db, "tarefas"), {
+        tarefa: form.task,
+        created: new Date(),
+        public: form.public,
+        user: email,
+      });
+      setForm({ task: "", public: false });
+    } catch (err) {
+      console.log(err);
+    }
   }
 
   return (
@@ -94,6 +116,10 @@ export const getServerSideProps: GetServerSideProps = async ({ req }) => {
     };
   }
   return {
-    props: {},
+    props: {
+      user: {
+        email: session.user.email,
+      },
+    },
   };
 };
