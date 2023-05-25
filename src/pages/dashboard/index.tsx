@@ -159,7 +159,7 @@ const Dashboard = ({ user: { email } }: PropsDashboard): ReactElement => {
               )}
 
               <div className={styles.taskContent}>
-                {item.public ? (
+                {item.public || item.user ? (
                   <Link href={`/task/${item.id}`}>
                     <p>{item.tarefa}</p>
                   </Link>
