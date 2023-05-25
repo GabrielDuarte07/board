@@ -1,4 +1,10 @@
-import { ReactElement, useState, ChangeEvent, FormEvent } from "react";
+import {
+  ReactElement,
+  useState,
+  ChangeEvent,
+  FormEvent,
+  useEffect,
+} from "react";
 import { GetServerSideProps } from "next";
 import { getSession } from "next-auth/react";
 import { FiShare2 } from "react-icons/fi";
@@ -8,7 +14,14 @@ import Head from "next/head";
 import Textarea from "@/components/textarea";
 
 import { db } from "@/services/firebaseConnection";
-import { addDoc, collection } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  where,
+  query,
+  orderBy,
+  onSnapshot,
+} from "firebase/firestore";
 
 type TypeForm = {
   task: string;
@@ -21,14 +34,48 @@ type PropsDashboard = {
   };
 };
 
+type TaskProps = {
+  id: string;
+  created: Date;
+  public: boolean;
+  tarefa: string;
+  user: string;
+};
+
 const Dashboard = ({ user: { email } }: PropsDashboard): ReactElement => {
   const [form, setForm] = useState<TypeForm>({ task: "", public: true });
+  const [tasks, setTasks] = useState<TaskProps[]>([]);
+
+  useEffect(() => {
+    async function loadTarefas() {
+      const collectionRef = collection(db, "tarefas");
+      const q = query(
+        collectionRef,
+        orderBy("created", "desc"),
+        where("user", "==", email)
+      );
+      onSnapshot(q, (snapshot) => {
+        const taskList: TaskProps[] = [];
+
+        snapshot.forEach((doc) => {
+          taskList.push({
+            id: doc.id,
+            created: doc.data().created,
+            tarefa: doc.data().tarefa,
+            user: doc.data().user,
+            public: doc.data().public,
+          });
+        });
+        setTasks(taskList);
+      });
+    }
+    loadTarefas();
+  }, [email, tasks]);
 
   async function handleSubmit(e: FormEvent): Promise<void> {
     e.preventDefault();
 
     if (!form.task) return;
-
     try {
       await addDoc(collection(db, "tarefas"), {
         tarefa: form.task,
@@ -80,23 +127,27 @@ const Dashboard = ({ user: { email } }: PropsDashboard): ReactElement => {
 
         <section className={styles.taskContainer}>
           <h1>Minhas tarefas</h1>
-          <article className={styles.task}>
-            <div className={styles.tagContainer}>
-              <label htmlFor="" className={styles.tag}>
-                PUBLICO
-              </label>
-              <button className={styles.shareButton}>
-                <FiShare2 size={22} color="#3183ff" />
-              </button>
-            </div>
+          {tasks.map((item) => (
+            <article key={item.id} className={styles.task}>
+              {item.public && (
+                <div className={styles.tagContainer}>
+                  <label htmlFor="" className={styles.tag}>
+                    PUBLICO
+                  </label>
+                  <button className={styles.shareButton}>
+                    <FiShare2 size={22} color="#3183ff" />
+                  </button>
+                </div>
+              )}
 
-            <div className={styles.taskContent}>
-              <p>Minha primeira tarefa de exemplo show demais</p>
-              <button className={styles.trashButton}>
-                <FaTrash size={24} color="#ea3140" />
-              </button>
-            </div>
-          </article>
+              <div className={styles.taskContent}>
+                <p>{item.tarefa}</p>
+                <button className={styles.trashButton}>
+                  <FaTrash size={24} color="#ea3140" />
+                </button>
+              </div>
+            </article>
+          ))}
         </section>
       </main>
     </div>
