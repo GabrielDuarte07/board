@@ -4,18 +4,39 @@ import Head from "next/head";
 import { GetServerSideProps } from "next";
 import { db } from "@/services/firebaseConnection";
 import { doc, getDoc, query, collection, where } from "firebase/firestore";
+import Textarea from "@/components/textarea";
 
-//type TaskProps = {};
+type TaskProps = {
+  item: {
+    id: string;
+    public: boolean;
+    created: string;
+    user: string;
+    tarefa: string;
+  };
+};
 
-const task = (): ReactElement => {
+const task = ({ item }: TaskProps): ReactElement => {
   return (
     <div className={styles.container}>
       <Head>
         <title>Detalhes da tarefa</title>
       </Head>
+
       <main className={styles.main}>
         <h1>tarefas</h1>
+        <article className={styles.task}>
+          <p>{item.tarefa}</p>
+        </article>
       </main>
+
+      <section className={styles.commentsContainer}>
+        <h2>Deixar Comentário</h2>
+        <form>
+          <Textarea placeholder="Digite o seu comentario..." />
+          <button className={styles.button}>Enviar comentrio</button>
+        </form>
+      </section>
     </div>
   );
 };
@@ -54,8 +75,7 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
     public: snapShot.data()?.public,
     tarefa: snapShot.data()?.tarefa,
   };
-  console.log(task);
   return {
-    props: {},
+    props: { item: task },
   };
 };
