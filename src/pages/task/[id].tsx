@@ -14,7 +14,7 @@ import {
   getDocs,
 } from "firebase/firestore";
 import Textarea from "@/components/textarea";
-import { spawn } from "child_process";
+import { FaTrash } from "react-icons/fa";
 
 type TaskProps = {
   item: {
@@ -29,7 +29,6 @@ type TaskProps = {
 
 type CommentProps = {
   id: string;
-  created: string;
   name: string;
   taskId: string;
   user: string;
@@ -54,6 +53,15 @@ const task = ({ item, allComments }: TaskProps): ReactElement => {
         name: session.user.name,
         taskId: item.id,
       });
+
+      const data = {
+        id: docRef.id,
+        comment: input,
+        taskId: item.id,
+        name: session.user.name,
+        user: session.user.email,
+      };
+      setComments((prevValue) => [...prevValue, data]);
       setInput("");
     } catch (err) {
       console.log(err);
@@ -95,6 +103,14 @@ const task = ({ item, allComments }: TaskProps): ReactElement => {
 
         {comments.map((item) => (
           <article className={styles.comment} key={item.id}>
+            <div className={styles.headComment}>
+              <label className={styles.commentsLabel}>{item.name}</label>
+              {item.user === session?.user?.email && (
+                <button className={styles.buttonTrash}>
+                  <FaTrash size={18} color="#EA3140" />
+                </button>
+              )}
+            </div>
             <p>{item.comment}</p>
           </article>
         ))}
@@ -120,7 +136,6 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
       comment: doc.data().comment,
       taskId: doc.data().taskId,
       name: doc.data().name,
-      created: doc.data().created.seconds,
     });
   });
 
