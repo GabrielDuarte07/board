@@ -11,8 +11,10 @@ import {
   collection,
   where,
   addDoc,
+  getDocs,
 } from "firebase/firestore";
 import Textarea from "@/components/textarea";
+import { spawn } from "child_process";
 
 type TaskProps = {
   item: {
@@ -22,11 +24,22 @@ type TaskProps = {
     user: string;
     tarefa: string;
   };
+  allComments: CommentProps[];
 };
 
-const task = ({ item }: TaskProps): ReactElement => {
+type CommentProps = {
+  id: string;
+  created: string;
+  name: string;
+  taskId: string;
+  user: string;
+  comment: string;
+};
+
+const task = ({ item, allComments }: TaskProps): ReactElement => {
   const { data: session } = useSession();
   const [input, setInput] = useState<string>("");
+  const [comments, setComments] = useState<CommentProps[]>(allComments);
 
   const handleComment = async (e: FormEvent): Promise<void> => {
     e.preventDefault();
@@ -75,6 +88,17 @@ const task = ({ item }: TaskProps): ReactElement => {
           </button>
         </form>
       </section>
+
+      <section className={styles.commentsContainer}>
+        <h2>Todos os Comentários</h2>
+        {comments.length === 0 && <span>Nenhum Comentário foi encontrado</span>}
+
+        {comments.map((item) => (
+          <article className={styles.comment} key={item.id}>
+            <p>{item.comment}</p>
+          </article>
+        ))}
+      </section>
     </div>
   );
 };
@@ -83,6 +107,23 @@ export default task;
 
 export const getServerSideProps: GetServerSideProps = async ({ params }) => {
   const id = params ? (params.id as string) : "";
+
+  const q = query(collection(db, "comments"), where("taskId", "==", id));
+  const snapshotComments = await getDocs(q);
+
+  const allComments: CommentProps[] = [];
+
+  snapshotComments.forEach((doc) => {
+    allComments.push({
+      user: doc.data().user,
+      id: doc.id,
+      comment: doc.data().comment,
+      taskId: doc.data().taskId,
+      name: doc.data().name,
+      created: doc.data().created.seconds,
+    });
+  });
+
   const docRef = doc(db, "tarefas", id);
   const snapShot = await getDoc(docRef);
 
@@ -114,6 +155,9 @@ export const getServerSideProps: GetServerSideProps = async ({ params }) => {
     tarefa: snapShot.data()?.tarefa,
   };
   return {
-    props: { item: task },
+    props: {
+      item: task,
+      allComments: allComments,
+    },
   };
 };
